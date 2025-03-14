@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SPG_Fachtheorie.Aufgabe1", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SPG_Fachtheorie.Aufgabe1.Test", "test\SPG_Fachtheorie.Aufgabe1.Test\SPG_Fachtheorie.Aufgabe1.Test.csproj", "{437B53DC-BA0A-4C7D-AB66-62D28895D7C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SPG_Fachtheorie.Aufgabe3", "src\SPG_Fachtheorie.Aufgabe3\SPG_Fachtheorie.Aufgabe3.csproj", "{718F338B-725B-4FE9-ABA0-614E1F38CF49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{437B53DC-BA0A-4C7D-AB66-62D28895D7C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{437B53DC-BA0A-4C7D-AB66-62D28895D7C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{437B53DC-BA0A-4C7D-AB66-62D28895D7C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{718F338B-725B-4FE9-ABA0-614E1F38CF49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{718F338B-725B-4FE9-ABA0-614E1F38CF49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{718F338B-725B-4FE9-ABA0-614E1F38CF49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{718F338B-725B-4FE9-ABA0-614E1F38CF49}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
