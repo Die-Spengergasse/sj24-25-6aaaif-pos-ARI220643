@@ -1,0 +1,91 @@
+= PUT und PATCH API Endpunkte für Payments
+:source-highlighter: rouge
+:lang: DE
+:hyphens:
+ifndef::env-github[:icons: font]
+ifdef::env-github[]
+:caution-caption: :fire:
+:important-caption: :exclamation:
+:note-caption: :paperclip:
+:tip-caption: :bulb:
+:warning-caption: :warning:
+endif::[]
+
+image::model.png[]
+
+== PUT /api/paymentItems/{id}
+
+Es kann vorkommen, dass ein PaymentItem aktualisiert werden muss.
+Deswegen soll im Controller _PaymentsController_ soll ein Endpunkt für das Aktualisieren von PaymentItems angelegt werden.
+Der Payload sieht z. B. so aus
+
+.PUT /api/paymentItems/1
+[source,json]
+----
+{
+  "id": 1,
+  "articleName": "Coca Cola 0.5l",
+  "amount": 2,
+  "price": 1.65,
+  "paymentId": 1,
+  "lastUpdated": null
+}
+----
+
+Gehe bei der Umsetzung wie folgt vor:
+
+* Füge in der Modelklasse _PaymentItem_ das Feld _LastUpdated_ vom Typ _DateTime_ (nullable) hinzu.
+  Das Feld soll standardmäßig auf _null_ gesetzt sein und bei jedem Update des Datensatzes aktualisiert werden.
+
+* Lege ein Command Objekt _UpdatePaymentItemCommand_ an, das die Informationen aus dem Payload speichern kann.
+  Berücksichtige in der Validierung, dass
+  ** Die _id_ größer als 0 ist.
+  ** Der _articleName_ nicht leer ist.
+  ** Der _amount_ größer als 0 ist.
+  ** Der _price_ größer als 0 ist.
+  ** Die _paymentId_ größer als 0 ist.
+
+* Ergänze den Endpunkt im Controller _PaymentsController_.
+  Es soll kein eigener Controller für PaymentItems angelegt werden.
+
+* Wurde das PaymentItem mit der übergebenen Id nicht gefunden, so ist Problem mit dem Status Code 404 und der Meldung "Payment Item not found" zu liefern.
+
+* Stimmt der gespeicherte Timestamp in _LastUpdated_ nicht mit dem Timestamp aus dem Payload überein, so ist Problem mit dem Status Code 400 und der Meldung "Payment item has changed" zu liefern.
+
+* Stimmt das Property _id_ aus dem Payload nicht mit der übergebenen ID aus dem Routing Parameter ein, so ist Problem mit dem Status Code 400 und der Meldung "Invalid payment item ID" zu liefern.
+
+* Frage das Objekt, auf das sich das Property _paymentId_ bezieht, ab.
+  Wird es nicht gefunden, so ist Problem mit dem Status Code 400 und der Meldung "Invalid payment ID" zu liefern.
+
+* Aktualisiere den Datensatz und liefere no content zurück.
+
+== PATCH /api/payments/{id}
+
+Es soll auch möglich sein, ein Payment zu aktualisieren.
+Füge dafür ein Property _Confirmed_ zur Modelklasse _Payment_ hinzu.
+Das Property hat den Typ _DateTime_, ist nullable und soll standardmäßig auf _null_ gesetzt sein.
+Der PATCH Endpunkt soll das Property _Confirmed_ aktualisieren.
+Lege hierfür den Endpunkt in _PaymentsController_ an.
+Der Payload sieht z. B. so aus
+
+.PATCH /api/payments/1
+[source,json]
+----
+{
+  "confirmed": "2025-03-21T14:00:00"
+}
+----
+
+Gehe bei der Umsetzung wie folgt vor:
+
+* Lege ein Command Objekt _UpdateConfirmedCommand_ an, das die Informationen aus dem Payload speichern kann.
+  Berücksichtige in der Validierung, dass der Datumswert von _confirmed_ maximal 1 Minute in der Zukunft liegen darf.
+  Hinweis: Implementiere dafür das Interface _IValidatableObject_.
+
+* Ergänze den Endpunkt im Controller _PaymentsController_.
+
+* Wurde das Payment mit der übergebenen ID nicht gefunden, so ist Problem mit dem Status Code 404 und der Meldung "Payment not found" zu liefern.
+
+* Wurde das Payment bereits bestätigt (_Confirmed_ ist nicht _null_), so ist Problem mit dem Status Code 400 und der Meldung "Payment already confirmed" zu liefern.
+
+* Aktualisiere den Datensatz und liefere no content zurück.
