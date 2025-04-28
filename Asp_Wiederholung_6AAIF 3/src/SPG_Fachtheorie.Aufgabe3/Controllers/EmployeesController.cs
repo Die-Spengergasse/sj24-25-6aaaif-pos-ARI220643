@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ValueGeneration.Internal;
 using SPG_Fachtheorie.Aufgabe1.Infrastructure;
 using SPG_Fachtheorie.Aufgabe1.Model;
-using SPG_Fachtheorie.Aufgabe3.Commands;
+using SPG_Fachtheorie.Aufgabe1.Commands;
 using SPG_Fachtheorie.Aufgabe3.Dtos;
 
 namespace SPG_Fachtheorie.Aufgabe3.Controllers

@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SPG_Fachtheorie.Aufgabe1.Model
 {
-    public abstract class Employee
+    public class Employee
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         protected Employee() { }

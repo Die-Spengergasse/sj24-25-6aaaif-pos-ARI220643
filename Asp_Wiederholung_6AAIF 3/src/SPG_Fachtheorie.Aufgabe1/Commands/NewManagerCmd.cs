@@ -1,8 +1,23 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
-namespace SPG_Fachtheorie.Aufgabe3.Commands
+namespace SPG_Fachtheorie.Aufgabe1.Commands
 {
-    public record UpdateManagerCmd(
+    /*
+    {
+      "registrationNumber": 1003,
+      "firstName": "FN1",
+      "lastName": "LN1",
+      "address": {
+        "street": "Spengergasse 20",
+        "zip": "1050",
+        "city": "Wien"
+      },
+      "carType": "SUV"
+    }
+    */
+    public record NewManagerCmd(
         [Range(1, 999999, ErrorMessage = "Invalid registration numbner")]
         int RegistrationNumber,
         [StringLength(255, MinimumLength = 1, ErrorMessage = "Invalid firstname")]
@@ -11,8 +26,7 @@ namespace SPG_Fachtheorie.Aufgabe3.Commands
         string LastName,
         AddressCmd? Address,
         [StringLength(255, MinimumLength = 1, ErrorMessage = "Invalid car type")]
-        string CarType,
-        DateTime? LastUpdate
+        string CarType
         ) : IValidatableObject
     {
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -20,7 +34,7 @@ namespace SPG_Fachtheorie.Aufgabe3.Commands
             if (FirstName.Length + LastName.Length < 3)
                 yield return new ValidationResult(
                     "Invalid name",
-                    new string[] { nameof(FirstName), nameof(LastName) });
+                    new string[] {nameof(FirstName), nameof(LastName)});
         }
     }
 }

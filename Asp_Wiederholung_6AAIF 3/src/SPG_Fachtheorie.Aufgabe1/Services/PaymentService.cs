@@ -3,9 +3,8 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using SPG_Fachtheorie.Aufgabe1.Model;
 using SPG_Fachtheorie.Aufgabe1.Infrastructure;
-using SPG_Fachtheorie.Aufgabe3.Commands;
 
-namespace SPG_Fachtheorie.Aufgabe3.Services
+namespace SPG_Fachtheorie.Aufgabe1.Services
 {
     public class PaymentServiceException : Exception
     {
@@ -37,32 +36,32 @@ namespace SPG_Fachtheorie.Aufgabe3.Services
             return _context.Employees.FirstOrDefault(e => e.RegistrationNumber == registrationNumber);
         }
 
-        public Payment CreatePayment(NewPaymentCommand cmd)
+        public Payment CreatePayment(CashDesk cashDesk, Employee employee, PaymentType paymentType)
         {
-            if (cmd.CashDesk == null)
+            if (cashDesk == null)
                 throw new PaymentServiceException("CashDesk not found.");
-            if (cmd.Employee == null)
+            if (employee == null)
                 throw new PaymentServiceException("Employee not found.");
 
             var existingOpenPayment = _context.Payments
-                .Any(p => p.CashDesk.Number == cmd.CashDeskNumber && p.PaymentDateTime == default);
+                .Any(p => p.CashDesk.Number == cashDesk.Number && p.PaymentDateTime == default);
 
             if (existingOpenPayment)
             {
                 throw new PaymentServiceException("Open payment for cashdesk.");
             }
 
-            if (Enum.Parse<PaymentType>(cmd.PaymentType) == PaymentType.CreditCard && 
-                cmd.Employee.Type != "Manager")
+            if (paymentType == PaymentType.CreditCard && 
+                employee.Type != "Manager")
             {
                 throw new PaymentServiceException("Insufficient rights to create a credit card payment.");
             }
 
             var payment = new Payment(
-                cmd.CashDesk,
+                cashDesk,
                 DateTime.UtcNow,
-                cmd.Employee,
-                Enum.Parse<PaymentType>(cmd.PaymentType));
+                employee,
+                paymentType);
 
             _context.Payments.Add(payment);
             _context.SaveChanges();
@@ -86,9 +85,9 @@ namespace SPG_Fachtheorie.Aufgabe3.Services
             _context.SaveChanges();
         }
 
-        public void AddPaymentItem(NewPaymentItemCommand cmd)
+        public void AddPaymentItem(int paymentId, string articleName, int amount, decimal price)
         {
-            var payment = _context.Payments.Find(cmd.PaymentId);
+            var payment = _context.Payments.Find(paymentId);
             if (payment == null)
             {
                 throw new PaymentServiceException("Payment not found.");
@@ -100,9 +99,9 @@ namespace SPG_Fachtheorie.Aufgabe3.Services
             }
 
             var paymentItem = new PaymentItem(
-                cmd.ArticleName,
-                cmd.Amount,
-                cmd.Price,
+                articleName,
+                amount,
+                price,
                 payment);
 
             _context.PaymentItems.Add(paymentItem);
