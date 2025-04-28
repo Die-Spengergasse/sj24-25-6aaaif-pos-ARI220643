@@ -8,17 +8,22 @@ namespace SPG_Fachtheorie.Aufgabe3.Models
         public int Id { get; set; }
         
         [Required]
-        public string ArticleName { get; set; }
+        [StringLength(100)]
+        public string ArticleName { get; set; } = string.Empty;
         
+        [Required]
         [Range(1, int.MaxValue)]
         public int Amount { get; set; }
         
+        [Required]
         [Range(0.01, double.MaxValue)]
         public decimal Price { get; set; }
         
-        public int PaymentId { get; set; }
-        public Payment Payment { get; set; }
+        [Required]
+        public StorePayment Payment { get; set; } = null!;
         
-        public DateTime? LastUpdated { get; set; }
+        public int PaymentId { get; set; }
+        
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     }
 } 

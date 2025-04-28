@@ -3,6 +3,9 @@ using SPG_Fachtheorie.Aufgabe3.Services;
 using SPG_Fachtheorie.Aufgabe3.Commands;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
+using SPG_Fachtheorie.Aufgabe3.Models;
+using SPG_Fachtheorie.Aufgabe1.Model;
+using System;
 
 namespace SPG_Fachtheorie.Aufgabe3.Controllers
 {
@@ -41,6 +44,32 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
         {
             try
             {
+                // Suche CashDesk und Employee
+                var cashDesk = _service.GetCashDesk(cmd.CashDeskNumber);
+                if (cashDesk == null)
+                {
+                    return Problem($"CashDesk mit Nummer {cmd.CashDeskNumber} wurde nicht gefunden.", 
+                        statusCode: 400);
+                }
+
+                var employee = _service.GetEmployee(cmd.EmployeeRegistrationNumber);
+                if (employee == null)
+                {
+                    return Problem($"Employee mit Registrierungsnummer {cmd.EmployeeRegistrationNumber} wurde nicht gefunden.", 
+                        statusCode: 400);
+                }
+
+                // Parse PaymentType
+                if (!Enum.TryParse<PaymentType>(cmd.PaymentType, true, out _))
+                {
+                    return Problem($"Ungültiger PaymentType: {cmd.PaymentType}. Erlaubte Werte sind: Cash, Maestro, CreditCard", 
+                        statusCode: 400);
+                }
+
+                // Setze die gefundenen Objekte
+                cmd.CashDesk = cashDesk;
+                cmd.Employee = employee;
+
                 var payment = _service.CreatePayment(cmd);
                 return CreatedAtAction(nameof(GetPayment), new { id = payment.Id }, payment);
             }
@@ -63,6 +92,10 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
             }
             catch (PaymentServiceException e)
             {
+                if (e.Message == "Payment not found.")
+                {
+                    return Problem(e.Message, statusCode: 404);
+                }
                 return Problem(e.Message, statusCode: 400);
             }
         }
@@ -96,6 +129,17 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
         {
             try
             {
+                if (!deleteItems)
+                {
+                    var payment = _service.Payments
+                        .FirstOrDefault(p => p.Id == id && p.PaymentItems.Any());
+                    
+                    if (payment != null)
+                    {
+                        return Problem("Payment has payment items.", statusCode: 400);
+                    }
+                }
+
                 _service.DeletePayment(id, deleteItems);
                 return NoContent();
             }

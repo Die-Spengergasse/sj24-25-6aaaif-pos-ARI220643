@@ -6,7 +6,7 @@ namespace SPG_Fachtheorie.Aufgabe3.Commands
     {
         [Required(ErrorMessage = "ArticleName ist erforderlich")]
         [StringLength(100, ErrorMessage = "ArticleName darf nicht länger als 100 Zeichen sein")]
-        public string ArticleName { get; set; }
+        public string ArticleName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Amount ist erforderlich")]
         [Range(1, int.MaxValue, ErrorMessage = "Amount muss größer als 0 sein")]

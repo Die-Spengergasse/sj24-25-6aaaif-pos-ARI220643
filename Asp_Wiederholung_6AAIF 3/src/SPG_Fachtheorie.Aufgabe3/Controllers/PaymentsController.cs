@@ -1,24 +1,27 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SPG_Fachtheorie.Aufgabe1.Infrastructure;
-using SPG_Fachtheorie.Aufgabe1.Model;
+using SPG_Fachtheorie.Aufgabe3.Infrastructure;
+using SPG_Fachtheorie.Aufgabe3.Models;
 using SPG_Fachtheorie.Aufgabe3.Commands;
 using SPG_Fachtheorie.Aufgabe3.Dtos;
+using SPG_Fachtheorie.Aufgabe3.Services;
+using SPG_Fachtheorie.Aufgabe1.Model;
 using System;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SPG_Fachtheorie.Aufgabe3.Controllers
 {
-    [Route("api/[controller]")]  // --> /api/payments
+    [Route("api/[controller]")]
     [ApiController]
     public class PaymentsController : ControllerBase
     {
-        private readonly AppointmentContext _db;
+        private readonly PaymentService _service;
 
-        public PaymentsController(AppointmentContext db)
+        public PaymentsController(PaymentService service)
         {
-            _db = db;
+            _service = service;
         }
 
         /// <summary>
@@ -30,7 +33,7 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
         public ActionResult<List<PaymentDto>> GetAllPayments(
             [FromQuery] int? cashDesk, [FromQuery] DateTime? dateFrom)
         {
-            var payments = _db.Payments
+            var payments = _service.Payments
                 .Where(p =>
                     cashDesk.HasValue
                         ? p.CashDesk.Number == cashDesk.Value : true)
@@ -41,7 +44,7 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
                     p.Id, p.Employee.FirstName, p.Employee.LastName,
                     p.PaymentDateTime,
                     p.CashDesk.Number, p.PaymentType.ToString(),
-                    p.PaymentItems.Sum(p => p.Amount)))
+                    p.PaymentItems.Sum(pi => pi.Amount)))
                 .ToList();
             return Ok(payments);
         }
@@ -51,7 +54,7 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<PaymentDetailDto> GetPaymentDetail(int id)
         {
-            var payment = _db.Payments
+            var payment = _service.Payments
                 .Where(p => p.Id == id)
                 .Select(p => new PaymentDetailDto(
                     p.Id, p.Employee.FirstName, p.Employee.LastName,
@@ -73,28 +76,34 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public IActionResult AddPayment(NewPaymentCommand cmd)
+        public IActionResult AddPayment([FromBody] NewPaymentCommand cmd)
         {
-            var cashDesk = _db.CashDesks.FirstOrDefault(c => c.Number == cmd.CashDeskNumber);
-            if (cashDesk is null) return Problem("Invalid cash desk", statusCode: 400);
-            var employee = _db.Employees.FirstOrDefault(e => e.RegistrationNumber == cmd.EmployeeRegistrationNumber);
-            if (employee is null) return Problem("Invalid employee", statusCode: 400);
-
-            if (!Enum.TryParse<PaymentType>(cmd.PaymentType, out var paymentType))
-                return Problem("Invalid payment type", statusCode: 400);
-
-            var payment = new Payment(
-                cashDesk, cmd.PaymentDateTime, employee, paymentType);
-            _db.Payments.Add(payment);
             try
             {
-                _db.SaveChanges();
+                var cashDesk = _service.GetCashDesk(cmd.CashDeskNumber);
+                if (cashDesk == null)
+                {
+                    return Problem($"CashDesk mit Nummer {cmd.CashDeskNumber} wurde nicht gefunden.", 
+                        statusCode: 400);
+                }
+
+                var employee = _service.GetEmployee(cmd.EmployeeRegistrationNumber);
+                if (employee == null)
+                {
+                    return Problem($"Employee mit Registrierungsnummer {cmd.EmployeeRegistrationNumber} wurde nicht gefunden.", 
+                        statusCode: 400);
+                }
+
+                cmd.CashDesk = cashDesk;
+                cmd.Employee = employee;
+
+                var payment = _service.CreatePayment(cmd);
+                return CreatedAtAction(nameof(GetPaymentDetail), new { id = payment.Id }, payment);
             }
-            catch (DbUpdateException e)
+            catch (PaymentServiceException e)
             {
-                return Problem(e.InnerException?.Message ?? e.Message);
+                return Problem(e.Message, statusCode: 400);
             }
-            return CreatedAtAction(nameof(AddPayment), new { Id = payment.Id });
         }
 
         /// <summary>
@@ -105,123 +114,76 @@ namespace SPG_Fachtheorie.Aufgabe3.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public IActionResult DeletePayment(int id, [FromQuery] bool deleteItems)
+        public IActionResult DeletePayment(int id, [FromQuery] bool deleteItems = false)
         {
-            var payment = _db.Payments.FirstOrDefault(p => p.Id == id);
-            if (payment is null) return NoContent();
-            var paymentItems = _db.PaymentItems.Where(p => p.Payment.Id == id).ToList();
-            if (paymentItems.Any() && deleteItems)
-            {
-                try
-                {
-                    _db.PaymentItems.RemoveRange(paymentItems);
-                    _db.SaveChanges();
-                }
-                catch (DbUpdateException e)
-                {
-                    return Problem(e.InnerException?.Message ?? e.Message, statusCode: 400);
-                }
-                catch (InvalidOperationException e)
-                {
-                    return Problem(
-                        e.InnerException?.Message ?? e.Message,
-                        statusCode: StatusCodes.Status400BadRequest);
-                }
-            }
             try
             {
-                _db.Payments.Remove(payment);
-                _db.SaveChanges();
+                _service.DeletePayment(id, deleteItems);
+                return NoContent();
             }
-            catch (DbUpdateException e)
+            catch (PaymentServiceException e)
             {
-                return Problem(e.InnerException?.Message ?? e.Message, statusCode: 400);
+                return Problem(e.Message, statusCode: 400);
             }
-            catch (InvalidOperationException e)
-            {
-                return Problem(
-                    e.InnerException?.Message ?? e.Message,
-                    statusCode: StatusCodes.Status400BadRequest);
-            }
-            return NoContent();
         }
 
-        [HttpPut("paymentItems/{id}")]
-        public async Task<IActionResult> UpdatePaymentItem(int id, [FromBody] UpdatePaymentItemCommand command)
+        [HttpPatch("{id}/confirm")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult ConfirmPayment(int id)
         {
-            if (id != command.Id)
+            try
             {
-                return BadRequest(new ProblemDetails
-                {
-                    Status = 400,
-                    Title = "Invalid payment item ID"
-                });
+                _service.ConfirmPayment(id);
+                return NoContent();
             }
-
-            var paymentItem = await _db.PaymentItems.FindAsync(id);
-            if (paymentItem == null)
+            catch (PaymentServiceException e)
             {
-                return NotFound(new ProblemDetails
+                if (e.Message.Contains("not found"))
                 {
-                    Status = 404,
-                    Title = "Payment Item not found"
-                });
+                    return NotFound(new ProblemDetails
+                    {
+                        Status = 404,
+                        Title = e.Message
+                    });
+                }
+                return Problem(e.Message, statusCode: 400);
             }
-
-            if (paymentItem.LastUpdated != command.LastUpdated)
-            {
-                return BadRequest(new ProblemDetails
-                {
-                    Status = 400,
-                    Title = "Payment item has changed"
-                });
-            }
-
-            var payment = await _db.Payments.FindAsync(command.PaymentId);
-            if (payment == null)
-            {
-                return BadRequest(new ProblemDetails
-                {
-                    Status = 400,
-                    Title = "Invalid payment ID"
-                });
-            }
-
-            paymentItem.ArticleName = command.ArticleName;
-            paymentItem.Amount = command.Amount;
-            paymentItem.Price = command.Price;
-            paymentItem.PaymentId = command.PaymentId;
-            paymentItem.LastUpdated = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-            return NoContent();
         }
 
-        [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdateConfirmed(int id, [FromBody] UpdateConfirmedCommand command)
+        [HttpPost("{id}/items")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult AddPaymentItem(int id, [FromBody] NewPaymentItemCommand cmd)
         {
-            var payment = await _db.Payments.FindAsync(id);
-            if (payment == null)
-            {
-                return NotFound(new ProblemDetails
-                {
-                    Status = 404,
-                    Title = "Payment not found"
-                });
-            }
-
-            if (payment.Confirmed.HasValue)
+            if (id != cmd.PaymentId)
             {
                 return BadRequest(new ProblemDetails
                 {
                     Status = 400,
-                    Title = "Payment already confirmed"
+                    Title = "PaymentId in URL and body must match"
                 });
             }
 
-            payment.Confirmed = command.Confirmed;
-            await _db.SaveChangesAsync();
-            return NoContent();
+            try
+            {
+                _service.AddPaymentItem(cmd);
+                return CreatedAtAction(nameof(GetPaymentDetail), new { id }, null);
+            }
+            catch (PaymentServiceException e)
+            {
+                if (e.Message.Contains("not found"))
+                {
+                    return NotFound(new ProblemDetails
+                    {
+                        Status = 404,
+                        Title = e.Message
+                    });
+                }
+                return Problem(e.Message, statusCode: 400);
+            }
         }
     }
 }
