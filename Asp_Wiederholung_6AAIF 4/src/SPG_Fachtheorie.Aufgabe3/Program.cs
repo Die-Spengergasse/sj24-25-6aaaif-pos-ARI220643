@@ -2,40 +2,48 @@ using Microsoft.EntityFrameworkCore;
 using SPG_Fachtheorie.Aufgabe1.Infrastructure;
 using SPG_Fachtheorie.Aufgabe1.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace SPG_Fachtheorie.Aufgabe3;
 
-// Suche im Programmcode nach allen Klassen mit [ApiController]
-builder.Services.AddControllers();
-builder.Services.AddScoped<EmployeeService>();
-// SERVICE PROVIDER
-// Stellt konfigurierte Instanzen von Klassen bereit
-builder.Services.AddDbContext<AppointmentContext>(opt =>
+public class Program
 {
-    opt.UseSqlite("DataSource=cash.db");
-});
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var app = builder.Build();
-app.UseHttpsRedirection();   // Wird mit http zugegriffen, wird auf https weitergeleitet.
-
-if (app.Environment.IsDevelopment())
-{
-    using (var scope = app.Services.CreateScope())
-    using (var db = scope.ServiceProvider.GetRequiredService<AppointmentContext>())
+    public static void Main(string[] args)
     {
-        db.Database.EnsureDeleted();
-        db.Database.EnsureCreated();
-        db.Seed();
-    }
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+        var builder = WebApplication.CreateBuilder(args);
 
-// Request pipeline
-app.MapControllers();  // Passt ein Controller zur Adresse? Ja: Diesen ausführen.
-app.Run();
+        // Suche im Programmcode nach allen Klassen mit [ApiController]
+        builder.Services.AddControllers();
+        builder.Services.AddScoped<EmployeeService>();
+        // SERVICE PROVIDER
+        // Stellt konfigurierte Instanzen von Klassen bereit
+        builder.Services.AddDbContext<AppointmentContext>(opt =>
+        {
+            opt.UseSqlite("DataSource=cash.db");
+        });
+
+        // Add services to the container.
+        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
+        var app = builder.Build();
+        app.UseHttpsRedirection();   // Wird mit http zugegriffen, wird auf https weitergeleitet.
+
+        if (app.Environment.IsDevelopment())
+        {
+            using (var scope = app.Services.CreateScope())
+            using (var db = scope.ServiceProvider.GetRequiredService<AppointmentContext>())
+            {
+                db.Database.EnsureDeleted();
+                db.Database.EnsureCreated();
+                db.Seed();
+            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        // Request pipeline
+        app.MapControllers();  // Passt ein Controller zur Adresse? Ja: Diesen ausfÃ¼hren.
+        app.Run();
+    }
+}
 
